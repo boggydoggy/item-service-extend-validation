@@ -12,9 +12,7 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Controller
 @RequestMapping("/validation/v2/items")
@@ -22,6 +20,10 @@ import java.util.Map;
 public class ValidationItemControllerV2 {
 
     private final ItemRepository itemRepository;
+    private final int MIN_PRICE = 1000;
+    private final int MAX_PRICE = 1000000;
+    private final int MAX_QUANTITY = 9999;
+    private final int PRICE_MULTI_QUANTITY = 10000;
 
     @GetMapping
     public String items(Model model) {
@@ -76,7 +78,7 @@ public class ValidationItemControllerV2 {
         return "redirect:/validation/v2/items/{itemId}";
     }
 
-    @PostMapping("/add")
+//    @PostMapping("/add")
     public String addItemV2(@ModelAttribute Item item, BindingResult bindingResult, RedirectAttributes redirectAttributes) {
         // 검증 로직
         if (!StringUtils.hasText(item.getItemName())) {
@@ -94,6 +96,39 @@ public class ValidationItemControllerV2 {
             int resultPrice = item.getPrice() * item.getQuantity();
             if (resultPrice < 10000) {
                 bindingResult.addError(new ObjectError("item", "가격 x 수량의 합은 10,000원 이상이야 합니다. 현재값 = " + resultPrice));
+            }
+        }
+
+        // 검증 실패 시 다시 입력 폼으로
+        if (bindingResult.hasErrors()) {
+            return "validation/v2/addForm";
+        }
+
+        // 검증 성공 시
+        Item savedItem = itemRepository.save(item);
+        redirectAttributes.addAttribute("itemId", savedItem.getId());
+        redirectAttributes.addAttribute("status", true);
+        return "redirect:/validation/v2/items/{itemId}";
+    }
+
+    @PostMapping("/add")
+    public String addItemV3(@ModelAttribute Item item, BindingResult bindingResult, RedirectAttributes redirectAttributes) {
+        // 검증 로직
+        if (!StringUtils.hasText(item.getItemName())) {
+            bindingResult.addError(new FieldError("item", "itemName", item.getItemName(), false, new String[]{"required.item.itemName"}, null,null));
+        }
+        if (item.getPrice() == null || item.getPrice() < MIN_PRICE || item.getPrice() > MAX_PRICE) {
+            bindingResult.addError(new FieldError("item", "price", item.getPrice(), false, new String[]{"range.item.price"}, new Object[]{MIN_PRICE, MAX_PRICE}, null));
+        }
+        if (item.getQuantity() == null || item.getQuantity() > MAX_QUANTITY) {
+            bindingResult.addError(new FieldError("item", "quantity", item.getQuantity(), false, new String[]{"max.item.quantity"}, new Object[]{MAX_QUANTITY}, null));
+        }
+
+        // 특정 필드가 아닌 복합 규칙 적용
+        if (item.getPrice() != null && item.getQuantity() != null) {
+            int resultPrice = item.getPrice() * item.getQuantity();
+            if (resultPrice < PRICE_MULTI_QUANTITY) {
+                bindingResult.addError(new ObjectError("item",new String[]{"totalPriceMin"}, new Object[]{PRICE_MULTI_QUANTITY, resultPrice}, null));
             }
         }
 
