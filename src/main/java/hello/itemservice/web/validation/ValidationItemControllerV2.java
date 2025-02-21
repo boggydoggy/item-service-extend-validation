@@ -9,6 +9,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
+import org.springframework.validation.ValidationUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -147,9 +148,10 @@ public class ValidationItemControllerV2 {
     @PostMapping("/add")
     public String addItemV4(@ModelAttribute Item item, BindingResult bindingResult, RedirectAttributes redirectAttributes) {
         // 검증 로직
-        if (!StringUtils.hasText(item.getItemName())) {
-            bindingResult.rejectValue("itemName", "required");
-        }
+        ValidationUtils.rejectIfEmptyOrWhitespace(bindingResult, "itemName", "required");
+//        if (!StringUtils.hasText(item.getItemName())) {
+//            bindingResult.rejectValue("itemName", "required");
+//        }
         if (item.getPrice() == null || item.getPrice() < MIN_PRICE || item.getPrice() > MAX_PRICE) {
             bindingResult.rejectValue("price", "range", new Object[]{MIN_PRICE, MAX_PRICE}, null);
         }
