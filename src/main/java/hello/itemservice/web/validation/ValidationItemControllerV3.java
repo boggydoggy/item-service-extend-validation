@@ -48,16 +48,24 @@ public class ValidationItemControllerV3 {
 
     @PostMapping("/add")
     public String addItem(@Validated @ModelAttribute Item item, BindingResult bindingResult, RedirectAttributes redirectAttributes) {
+        // 특정 필드가 아닌 복합 규칙 적용
+        if (item.getPrice() != null && item.getQuantity() != null) {
+            int resultPrice = item.getPrice() * item.getQuantity();
+            if (resultPrice < PRICE_MULTI_QUANTITY) {
+                bindingResult.reject("totalPriceMin", new Object[]{PRICE_MULTI_QUANTITY}, null);
+            }
+        }
+
         // 검증 실패 시 다시 입력 폼으로
         if (bindingResult.hasErrors()) {
-            return "validation/v2/addForm";
+            return "validation/v3/addForm";
         }
 
         // 검증 성공 시
         Item savedItem = itemRepository.save(item);
         redirectAttributes.addAttribute("itemId", savedItem.getId());
         redirectAttributes.addAttribute("status", true);
-        return "redirect:/validation/v2/items/{itemId}";
+        return "redirect:/validation/v3/items/{itemId}";
     }
 
     @GetMapping("/{itemId}/edit")
