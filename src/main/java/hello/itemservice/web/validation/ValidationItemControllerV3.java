@@ -3,6 +3,7 @@ package hello.itemservice.web.validation;
 import hello.itemservice.domain.item.Item;
 import hello.itemservice.domain.item.ItemRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -19,6 +20,7 @@ import java.util.List;
 
 import static hello.itemservice.Constants.*;
 
+@Slf4j
 @Controller
 @RequestMapping("/validation/v3/items")
 @RequiredArgsConstructor
@@ -52,12 +54,13 @@ public class ValidationItemControllerV3 {
         if (item.getPrice() != null && item.getQuantity() != null) {
             int resultPrice = item.getPrice() * item.getQuantity();
             if (resultPrice < PRICE_MULTI_QUANTITY) {
-                bindingResult.reject("totalPriceMin", new Object[]{PRICE_MULTI_QUANTITY}, null);
+                bindingResult.reject("totalPriceMin", new Object[]{PRICE_MULTI_QUANTITY, resultPrice}, null);
             }
         }
 
         // 검증 실패 시 다시 입력 폼으로
         if (bindingResult.hasErrors()) {
+            log.info("error = " + bindingResult);
             return "validation/v3/addForm";
         }
 
@@ -76,7 +79,19 @@ public class ValidationItemControllerV3 {
     }
 
     @PostMapping("/{itemId}/edit")
-    public String edit(@PathVariable Long itemId, @ModelAttribute Item item) {
+    public String edit(@PathVariable Long itemId, @Validated @ModelAttribute Item item, BindingResult bindingResult) {
+        if (item.getPrice() != null && item.getQuantity() != null) {
+            int resultPrice = item.getPrice() * item.getQuantity();
+            if (resultPrice < PRICE_MULTI_QUANTITY) {
+                bindingResult.reject("totalPriceMin", new Object[]{PRICE_MULTI_QUANTITY, resultPrice}, null);
+            }
+        }
+
+        if (bindingResult.hasErrors()) {
+            log.info("error = " + bindingResult);
+            return "validation/v3/editForm";
+        }
+
         itemRepository.update(itemId, item);
         return "redirect:/validation/v3/items/{itemId}";
     }
